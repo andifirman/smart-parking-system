@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Node
+node_modules/
+dist/
+build/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# ML models and artifacts
+ml/weights/*
+!ml/weights/.gitkeep
+ml/experiments/*
+!ml/experiments/.gitkeep
+
+# Data and captures
+data/raw/*
+data/annotated/*
+data/processed/*
+data/captures/*
+data/samples/*
+!**/.gitkeep
+
+# Misc
+.DS_Store
+Thumbs.db
+*.log
+
+RUN_SERVICE.md
+
+/TEMPORARY

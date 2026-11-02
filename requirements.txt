@@ -1,0 +1,7 @@
+ultralytics
+easyocr
+ipywidgets
+opencv-python
+numpy
+pyserial
+python-dotenv
