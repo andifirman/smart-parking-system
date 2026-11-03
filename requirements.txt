@@ -1,7 +1,10 @@
 ultralytics
 easyocr
 ipywidgets
+ipykernel
+kagglehub
 opencv-python
 numpy
+PyYAML
 pyserial
 python-dotenv
