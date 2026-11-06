@@ -107,6 +107,39 @@ def _order_quad_points(points: np.ndarray) -> np.ndarray:
     return ordered
 
 
+def polygon_to_quad(polygon: np.ndarray) -> np.ndarray | None:
+    """Reduce a segmentation contour to four stable plate corners."""
+    points = np.asarray(polygon, dtype=np.float32).reshape(-1, 2)
+    if len(points) < 4:
+        return None
+    hull = cv2.convexHull(points).reshape(-1, 2)
+    perimeter = cv2.arcLength(hull.reshape(-1, 1, 2), True)
+    for epsilon in np.linspace(0.01, 0.10, 19):
+        approximated = cv2.approxPolyDP(
+            hull.reshape(-1, 1, 2),
+            float(epsilon * perimeter),
+            True,
+        ).reshape(-1, 2)
+        if len(approximated) == 4 and cv2.isContourConvex(approximated.reshape(-1, 1, 2)):
+            return _order_quad_points(approximated.astype(np.float32))
+    return _order_quad_points(cv2.boxPoints(cv2.minAreaRect(points)).astype(np.float32))
+
+
+def warp_plate_polygon(image: np.ndarray, polygon: np.ndarray) -> np.ndarray | None:
+    """Rectify a segmented plate polygon into a horizontal OCR crop."""
+    ordered = polygon_to_quad(polygon)
+    if ordered is None:
+        return None
+    top_left, top_right, bottom_right, bottom_left = ordered
+    width = int(max(np.linalg.norm(top_right - top_left), np.linalg.norm(bottom_right - bottom_left)))
+    height = int(max(np.linalg.norm(bottom_left - top_left), np.linalg.norm(bottom_right - top_right)))
+    if width < 24 or height < 12 or width / max(height, 1) < 1.4:
+        return None
+    destination = np.float32([[0, 0], [width - 1, 0], [width - 1, height - 1], [0, height - 1]])
+    matrix = cv2.getPerspectiveTransform(ordered, destination)
+    return cv2.warpPerspective(image, matrix, (width, height), borderMode=cv2.BORDER_REPLICATE)
+
+
 def encode_jpeg(image: np.ndarray, quality: int = 90) -> str:
     ok, encoded = cv2.imencode(".jpg", image, [cv2.IMWRITE_JPEG_QUALITY, quality])
     if not ok:
@@ -170,10 +203,18 @@ class AnprService:
         annotated = image.copy()
         detections: list[dict[str, object]] = []
         boxes = prediction.boxes if prediction.boxes is not None else []
-        ordered_boxes = sorted(boxes, key=lambda box: float(box.xyxy[0][0]))
+        polygons = prediction.masks.xy if prediction.masks is not None else []
+        ordered_indices = sorted(range(len(boxes)), key=lambda item: float(boxes[item].xyxy[0][0]))
 
-        for index, box in enumerate(ordered_boxes, start=1):
+        for index, prediction_index in enumerate(ordered_indices, start=1):
+            box = boxes[prediction_index]
             crop, coordinates = self._crop_with_margin(image, box.xyxy[0].tolist())
+            geometry_method = "bounding_box"
+            if prediction_index < len(polygons):
+                rectified = warp_plate_polygon(image, polygons[prediction_index])
+                if rectified is not None:
+                    crop = rectified
+                    geometry_method = "segmentation_rectified"
             if crop.size == 0:
                 continue
             text, ocr_confidence, ocr_variant, ocr_latency_ms, candidates = self._recognize_crop(crop)
@@ -193,6 +234,7 @@ class AnprService:
                     "ocr_confidence": ocr_confidence,
                     "ocr_latency_ms": round(ocr_latency_ms, 1),
                     "ocr_variant": ocr_variant,
+                    "geometry_method": geometry_method,
                     "ocr_candidates": candidates,
                     "bounding_box": list(coordinates),
                     "crop_image_base64": encode_jpeg(crop),

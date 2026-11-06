@@ -6,7 +6,9 @@ from apps.vision.src.recognition.anpr_service import (
     decision_status,
     normalize_plate_text,
     plate_preprocessing_variants,
+    polygon_to_quad,
     rectify_plate_crop,
+    warp_plate_polygon,
 )
 
 
@@ -44,6 +46,29 @@ def test_rectify_plate_crop_warps_large_quadrilateral() -> None:
     cv2.polylines(image, [polygon], True, (255, 255, 255), 4)
 
     rectified = rectify_plate_crop(image)
+
+    assert rectified is not None
+    assert rectified.shape[1] > rectified.shape[0]
+
+
+def test_polygon_to_quad_reduces_dense_segmentation_contour() -> None:
+    polygon = np.array(
+        [[30, 35], [100, 25], [210, 15], [220, 45], [205, 95], [100, 105], [20, 110]],
+        dtype=np.float32,
+    )
+
+    quad = polygon_to_quad(polygon)
+
+    assert quad is not None
+    assert quad.shape == (4, 2)
+
+
+def test_warp_plate_polygon_rectifies_oblique_mask() -> None:
+    image = np.zeros((140, 260, 3), dtype=np.uint8)
+    polygon = np.array([[35, 35], [230, 15], [205, 110], [20, 125]], dtype=np.float32)
+    cv2.fillPoly(image, [polygon.astype(np.int32)], (255, 255, 255))
+
+    rectified = warp_plate_polygon(image, polygon)
 
     assert rectified is not None
     assert rectified.shape[1] > rectified.shape[0]

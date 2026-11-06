@@ -57,6 +57,8 @@ function renderResults(data) {
     node.querySelector(".plate-crop").src = `data:image/jpeg;base64,${detection.crop_image_base64}`;
     node.querySelector(".detection-confidence").textContent = formatPercent(detection.detection_confidence);
     node.querySelector(".ocr-confidence").textContent = formatPercent(detection.ocr_confidence);
+    node.querySelector(".geometry-method").textContent =
+      detection.geometry_method === "segmentation_rectified" ? "Segmented + rectified" : "Bounding box";
     node.querySelector(".ocr-variant").textContent = detection.ocr_variant;
     node.querySelector(".ocr-latency").textContent = `${detection.ocr_latency_ms.toFixed(1)} ms`;
     detectionsContainer.append(node);

@@ -105,6 +105,20 @@ The training script expects the Roboflow parking dataset at
 and evaluates it against the provided test split. Generated datasets, runs,
 and packaged weights remain ignored by Git.
 
+For oblique plates, build the polygon-only dataset and fine-tune the YOLO11n
+segmentation model in the isolated YOLO environment:
+
+```powershell
+.\.venv_yolo\Scripts\python.exe ml\training\build_plate_segmentation_dataset.py
+.\.venv_yolo\Scripts\python.exe ml\training\train_plate_segmentation.py
+.\.venv\Scripts\python.exe infrastructure\scripts\package_anpr_models.py
+```
+
+The runtime uses the segmentation mask to rectify the plate perspective before
+OCR. If a valid quadrilateral cannot be recovered, it falls back to the regular
+bounding-box crop. Training artifacts are written to
+`ml/experiments/yolo_plate_segmentation/yolo11n_plate_seg_v1/`.
+
 The OCR recognizer can be adapted to oblique parking-camera views with a
 balanced mix of original and deterministic perspective-augmented crops:
 
