@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Smart Parking System</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div>
+        <p class="eyebrow">SMART PARKING SYSTEM</p>
+        <h1>Plate inspection</h1>
+      </div>
+      <div class="service-state" id="service-state" aria-live="polite">
+        <span class="state-dot"></span>
+        Checking models
+      </div>
+    </header>
+
+    <main>
+      <section class="upload-panel" aria-labelledby="upload-title">
+        <div>
+          <h2 id="upload-title">Analyze vehicle image</h2>
+          <p>JPEG, PNG, WEBP, or BMP. Maximum 12 MB.</p>
+        </div>
+        <form id="upload-form">
+          <label class="file-input" for="image-input">
+            <span id="file-label">Choose image</span>
+            <input id="image-input" name="image" type="file" accept="image/jpeg,image/png,image/webp,image/bmp" required />
+          </label>
+          <button id="analyze-button" type="submit">Analyze plate</button>
+        </form>
+      </section>
+
+      <section class="message" id="message" hidden aria-live="polite"></section>
+
+      <section class="result-layout" id="results" hidden>
+        <div class="image-stage">
+          <div class="section-heading">
+            <h2>Detection evidence</h2>
+            <span id="processing-time"></span>
+          </div>
+          <img id="annotated-image" alt="Vehicle image with detected license plates" />
+        </div>
+
+        <aside class="result-panel">
+          <div class="section-heading">
+            <h2>Recognized plates</h2>
+            <span id="detection-count"></span>
+          </div>
+          <div id="detections" class="detections"></div>
+        </aside>
+      </section>
+    </main>
+
+    <template id="detection-template">
+      <article class="detection-item">
+        <div class="detection-topline">
+          <span class="plate-text"></span>
+          <span class="status-badge"></span>
+        </div>
+        <img class="plate-crop" alt="Detected license plate crop" />
+        <dl>
+          <div><dt>Detection</dt><dd class="detection-confidence"></dd></div>
+          <div><dt>Recognition</dt><dd class="ocr-confidence"></dd></div>
+          <div><dt>OCR variant</dt><dd class="ocr-variant"></dd></div>
+          <div><dt>OCR latency</dt><dd class="ocr-latency"></dd></div>
+        </dl>
+      </article>
+    </template>
+
+    <script src="/static/app.js" defer></script>
+  </body>
+</html>

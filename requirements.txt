@@ -1,10 +1,16 @@
 ultralytics
 easyocr
+paddlepaddle==3.2.0
+paddleocr
 ipywidgets
 ipykernel
 kagglehub
-opencv-python
+opencv-contrib-python
 numpy
 PyYAML
 pyserial
 python-dotenv
+fastapi
+uvicorn[standard]
+python-multipart
+pytest

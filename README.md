@@ -85,6 +85,26 @@ An NVIDIA GPU is optional. OCR and inference work on CPU, but YOLO training can
 be considerably slower. Check the active PyTorch device in the first notebook
 cells before starting a long training run.
 
+### Parking-domain detector training
+
+The web application uses a YOLO detector fine-tuned for parking-camera images.
+Training is isolated in `.venv_yolo` so its CUDA-enabled PyTorch installation
+does not conflict with PaddleOCR in the main `.venv`.
+
+```powershell
+py -3.12 -m venv .venv_yolo
+.\.venv_yolo\Scripts\python.exe -m pip install ultralytics PyYAML
+.\.venv_yolo\Scripts\python.exe -m pip install "torch==2.14.1+cu126" "torchvision==0.29.1+cu126" --index-url https://download.pytorch.org/whl/cu126
+.\.venv_yolo\Scripts\python.exe ml\training\train_parking_plate_detector.py
+.\.venv\Scripts\python.exe infrastructure\scripts\package_anpr_models.py
+```
+
+The training script expects the Roboflow parking dataset at
+`TEMPORARY/Test V2/`, writes the best checkpoint to
+`ml/experiments/yolo_license_plate_detector/yolo11n_parking_v2/weights/best.pt`,
+and evaluates it against the provided test split. Generated datasets, runs,
+and packaged weights remain ignored by Git.
+
 ## Windows Setup
 
 Open PowerShell and run:
@@ -258,6 +278,32 @@ Only source code, documentation, configuration, empty-directory placeholders,
 and notebooks without execution output should be committed.
 
 ## Development Status
+
+## Run the Local ANPR Web App
+
+Package the locally trained detector and recognizer once:
+
+```powershell
+python infrastructure/scripts/package_anpr_models.py
+```
+
+The runtime artifacts are copied to `ml/weights/anpr/`. This directory is
+ignored by Git and must be distributed through approved model storage for
+other machines.
+
+Start the local web application from the repository root:
+
+```powershell
+python -m uvicorn apps.api.app.main:app --host 127.0.0.1 --port 8000
+```
+
+Open `http://127.0.0.1:8000`. The upload is decoded and processed in memory;
+the application does not save the raw image. The API loads YOLO and PaddleOCR
+once, then reuses both model instances for subsequent requests.
+
+Runtime paths and thresholds can be changed through the variables documented
+in `.env.example`. The current `ACCEPT` threshold is provisional and must be
+calibrated against validation data before controlling a physical barrier.
 
 Current phase: **Phase 1 - image and webcam-based license-plate detection using
 YOLO, followed by OCR recognition**.

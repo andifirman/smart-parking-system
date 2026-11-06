@@ -1,0 +1,95 @@
+:root {
+  --ink: #121212;
+  --paper: #f5f5f2;
+  --surface: #ffffff;
+  --muted: #666963;
+  --line: #121212;
+  --accent: #f2d13d;
+  --accept: #167548;
+  --accept-soft: #dff3e8;
+  --review: #8a5700;
+  --review-soft: #fff0c9;
+  --reject: #a52a2a;
+  --reject-soft: #fde1df;
+  --shadow: 5px 5px 0 var(--ink);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: var(--paper);
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; }
+button, input { font: inherit; }
+
+.app-header {
+  min-height: 112px;
+  padding: 24px clamp(20px, 4vw, 56px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  color: #fff;
+  background: var(--ink);
+  border-bottom: 4px solid var(--accent);
+}
+
+.eyebrow { margin: 0 0 4px; color: var(--accent); font-size: 12px; font-weight: 800; }
+h1, h2, p { margin-top: 0; }
+h1 { margin-bottom: 0; font-size: clamp(26px, 4vw, 42px); letter-spacing: 0; }
+h2 { margin-bottom: 6px; font-size: 18px; letter-spacing: 0; }
+
+.service-state { display: flex; align-items: center; gap: 9px; font-size: 13px; font-weight: 700; }
+.state-dot { width: 11px; height: 11px; background: var(--review-soft); border: 2px solid #fff; }
+.service-state.ready .state-dot { background: #43d98a; }
+.service-state.error .state-dot { background: #ff6b62; }
+
+main { width: min(1440px, 100%); margin: 0 auto; padding: 28px clamp(16px, 4vw, 48px) 56px; }
+.upload-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 22px;
+  background: var(--surface);
+  border: 3px solid var(--line);
+  box-shadow: var(--shadow);
+}
+.upload-panel p { margin-bottom: 0; color: var(--muted); font-size: 14px; }
+form { display: flex; align-items: stretch; gap: 10px; }
+.file-input { min-width: 240px; padding: 12px 14px; background: var(--paper); border: 2px solid var(--line); cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-input input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+button { padding: 12px 18px; font-weight: 800; color: var(--ink); background: var(--accent); border: 2px solid var(--line); cursor: pointer; }
+button:hover { transform: translate(-1px, -1px); box-shadow: 3px 3px 0 var(--ink); }
+button:disabled { cursor: wait; opacity: 0.65; transform: none; box-shadow: none; }
+
+.message { margin-top: 24px; padding: 16px; border: 2px solid var(--line); background: var(--review-soft); }
+.message.error { color: var(--reject); background: var(--reject-soft); }
+.result-layout { margin-top: 28px; display: grid; grid-template-columns: minmax(0, 1fr) 370px; gap: 24px; align-items: start; }
+.image-stage, .result-panel { min-width: 0; background: var(--surface); border: 3px solid var(--line); }
+.section-heading { min-height: 54px; padding: 13px 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 2px solid var(--line); }
+.section-heading h2 { margin: 0; }
+.section-heading span { color: var(--muted); font-size: 13px; }
+#annotated-image { display: block; width: 100%; max-height: 72vh; object-fit: contain; background: #d9dad6; }
+.detections { max-height: calc(72vh + 54px); overflow-y: auto; }
+.detection-item { padding: 16px; border-bottom: 2px solid var(--line); }
+.detection-item:last-child { border-bottom: 0; }
+.detection-topline { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.plate-text { font-family: "Courier New", monospace; font-size: 22px; font-weight: 800; }
+.status-badge { padding: 4px 7px; border: 2px solid currentColor; font-size: 11px; font-weight: 900; }
+.status-badge.accept { color: var(--accept); background: var(--accept-soft); }
+.status-badge.review { color: var(--review); background: var(--review-soft); }
+.status-badge.reject { color: var(--reject); background: var(--reject-soft); }
+.plate-crop { display: block; width: 100%; max-height: 130px; object-fit: contain; background: var(--paper); border: 2px solid var(--line); }
+dl { margin: 12px 0 0; display: grid; gap: 7px; }
+dl div { display: flex; justify-content: space-between; gap: 16px; }
+dt { color: var(--muted); font-size: 13px; }
+dd { margin: 0; font-size: 13px; font-weight: 750; }
+.empty { padding: 24px 16px; color: var(--muted); }
+
+@media (max-width: 880px) {
+  .app-header, .upload-panel { align-items: flex-start; flex-direction: column; }
+  form { width: 100%; flex-direction: column; }
+  .file-input { width: 100%; min-width: 0; }
+  .result-layout { grid-template-columns: 1fr; }
+  .detections { max-height: none; }
+}
