@@ -1,3 +1,4 @@
+import cv2
 import numpy as np
 
 from apps.vision.src.recognition.anpr_service import (
@@ -5,6 +6,7 @@ from apps.vision.src.recognition.anpr_service import (
     decision_status,
     normalize_plate_text,
     plate_preprocessing_variants,
+    rectify_plate_crop,
 )
 
 
@@ -34,3 +36,14 @@ def test_plate_preprocessing_variants_upscale_small_crop() -> None:
 
     assert [name for name, _ in variants] == ["original", "clahe", "otsu", "adaptive"]
     assert all(image.shape[0] == 112 for _, image in variants)
+
+
+def test_rectify_plate_crop_warps_large_quadrilateral() -> None:
+    image = np.zeros((120, 240, 3), dtype=np.uint8)
+    polygon = np.array([[35, 30], [220, 10], [205, 95], [20, 110]], dtype=np.int32)
+    cv2.polylines(image, [polygon], True, (255, 255, 255), 4)
+
+    rectified = rectify_plate_crop(image)
+
+    assert rectified is not None
+    assert rectified.shape[1] > rectified.shape[0]

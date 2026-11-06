@@ -62,7 +62,49 @@ def plate_preprocessing_variants(crop: np.ndarray) -> list[tuple[str, np.ndarray
         31,
         7,
     )
-    return [("original", resized), ("clahe", clahe), ("otsu", otsu), ("adaptive", adaptive)]
+    variants = [("original", resized), ("clahe", clahe), ("otsu", otsu), ("adaptive", adaptive)]
+    rectified = rectify_plate_crop(resized)
+    if rectified is not None:
+        rectified_gray = cv2.cvtColor(rectified, cv2.COLOR_BGR2GRAY)
+        rectified_clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8)).apply(rectified_gray)
+        variants.extend([("rectified", rectified), ("rectified_clahe", rectified_clahe)])
+    return variants
+
+
+def rectify_plate_crop(crop: np.ndarray) -> np.ndarray | None:
+    """Find a plausible plate quadrilateral and warp it to a frontal view."""
+    gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY) if crop.ndim == 3 else crop
+    edges = cv2.Canny(cv2.GaussianBlur(gray, (5, 5), 0), 40, 140)
+    contours, _ = cv2.findContours(edges, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+    crop_area = crop.shape[0] * crop.shape[1]
+    for contour in sorted(contours, key=cv2.contourArea, reverse=True)[:20]:
+        perimeter = cv2.arcLength(contour, True)
+        polygon = cv2.approxPolyDP(contour, 0.025 * perimeter, True)
+        area = cv2.contourArea(polygon)
+        if len(polygon) != 4 or not cv2.isContourConvex(polygon) or area < crop_area * 0.18:
+            continue
+        points = polygon.reshape(4, 2).astype(np.float32)
+        ordered = _order_quad_points(points)
+        top_left, top_right, bottom_right, bottom_left = ordered
+        width = int(max(np.linalg.norm(top_right - top_left), np.linalg.norm(bottom_right - bottom_left)))
+        height = int(max(np.linalg.norm(bottom_left - top_left), np.linalg.norm(bottom_right - top_right)))
+        if height < 16 or width / max(height, 1) < 1.7:
+            continue
+        destination = np.float32([[0, 0], [width - 1, 0], [width - 1, height - 1], [0, height - 1]])
+        matrix = cv2.getPerspectiveTransform(ordered, destination)
+        return cv2.warpPerspective(crop, matrix, (width, height), borderMode=cv2.BORDER_REPLICATE)
+    return None
+
+
+def _order_quad_points(points: np.ndarray) -> np.ndarray:
+    ordered = np.zeros((4, 2), dtype=np.float32)
+    coordinate_sum = points.sum(axis=1)
+    coordinate_difference = np.diff(points, axis=1).reshape(-1)
+    ordered[0] = points[np.argmin(coordinate_sum)]
+    ordered[2] = points[np.argmax(coordinate_sum)]
+    ordered[1] = points[np.argmin(coordinate_difference)]
+    ordered[3] = points[np.argmax(coordinate_difference)]
+    return ordered
 
 
 def encode_jpeg(image: np.ndarray, quality: int = 90) -> str:

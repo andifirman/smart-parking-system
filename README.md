@@ -105,6 +105,18 @@ The training script expects the Roboflow parking dataset at
 and evaluates it against the provided test split. Generated datasets, runs,
 and packaged weights remain ignored by Git.
 
+The OCR recognizer can be adapted to oblique parking-camera views with a
+balanced mix of original and deterministic perspective-augmented crops:
+
+```powershell
+.\.venv\Scripts\python.exe ml\training\build_perspective_ocr_dataset.py
+.\.venv\Scripts\python.exe ml\training\paddleocr_runner.py TEMPORARY\PaddleOCR\tools\train.py -c ml\experiments\paddleocr_plate_recognizer\plate_recognizer_perspective_v3.yml
+.\.venv\Scripts\python.exe ml\training\evaluate_plate_recognizers.py
+```
+
+Validation and test images remain unmodified. The runtime packager uses the
+exported `inference_perspective_v3` recognizer.
+
 ## Windows Setup
 
 Open PowerShell and run:
