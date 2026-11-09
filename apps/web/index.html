@@ -30,7 +30,26 @@
             <input id="image-input" name="image" type="file" accept="image/jpeg,image/png,image/webp,image/bmp" required />
           </label>
           <button id="analyze-button" type="submit">Analyze plate</button>
+          <button id="camera-button" class="secondary-button" type="button">Use camera</button>
         </form>
+      </section>
+
+      <section class="camera-panel" id="camera-panel" hidden aria-labelledby="camera-title">
+        <div class="section-heading">
+          <div>
+            <h2 id="camera-title">Camera preview</h2>
+            <span id="camera-state">Camera is off</span>
+          </div>
+          <button id="close-camera-button" class="secondary-button compact-button" type="button">Close</button>
+        </div>
+        <div class="camera-stage">
+          <video id="camera-preview" autoplay playsinline muted></video>
+          <canvas id="camera-canvas" hidden></canvas>
+        </div>
+        <div class="camera-actions">
+          <button id="start-camera-button" type="button">Start camera</button>
+          <button id="capture-button" type="button" disabled>Capture &amp; analyze</button>
+        </div>
       </section>
 
       <section class="message" id="message" hidden aria-live="polite"></section>

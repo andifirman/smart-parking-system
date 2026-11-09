@@ -72,6 +72,12 @@ evaluates its mAP, and runs the end-to-end flow:
 full image -> YOLO bounding box -> plate crop -> EasyOCR -> normalized text
 ```
 
+### `08_camera_plate_polygon_labeling.ipynb`
+
+Provides a resumable local UI for labeling four-corner license-plate polygons
+from `data/raw/camera_plate_v1/images/unlabeled/`. Labels are written in YOLO
+segmentation format without modifying or copying the source images.
+
 ## Prerequisites
 
 - Git
@@ -119,6 +125,20 @@ OCR. If a valid quadrilateral cannot be recovered, it falls back to the regular
 bounding-box crop. Training artifacts are written to
 `ml/experiments/yolo_plate_segmentation/yolo11n_plate_seg_v1/`.
 
+Camera-domain adaptation starts from the validated v1 checkpoint and keeps
+capture bursts within a single split:
+
+```powershell
+.\.venv\Scripts\python.exe ml\training\build_camera_adaptation_dataset.py
+.\.venv_yolo\Scripts\python.exe ml\training\train_camera_adapted_segmenter.py
+.\.venv_yolo\Scripts\python.exe ml\training\compare_plate_segmenters.py
+.\.venv\Scripts\python.exe ml\training\evaluate_camera_anpr.py
+```
+
+Only promote v2 after it improves the held-out camera set without regressing
+the legacy test set. The runtime packager uses the validated
+`yolo11n_plate_seg_v2_camera/weights/best.pt` checkpoint.
+
 The OCR recognizer can be adapted to oblique parking-camera views with a
 balanced mix of original and deterministic perspective-augmented crops:
 
@@ -130,6 +150,21 @@ balanced mix of original and deterministic perspective-augmented crops:
 
 Validation and test images remain unmodified. The runtime packager uses the
 exported `inference_perspective_v3` recognizer.
+
+## Run the Local Web Application
+
+Package the validated models once, then start FastAPI from the repository root:
+
+```powershell
+.\.venv\Scripts\python.exe infrastructure\scripts\package_anpr_models.py
+.\.venv\Scripts\python.exe -m uvicorn apps.api.app.main:app --host 127.0.0.1 --port 8000
+```
+
+Open `http://127.0.0.1:8000`. Use **Choose image** for phone captures or
+**Use camera** for a local webcam. Webcam frames are sent directly to the ANPR
+API and are not written to disk. Browser camera access works on localhost; a
+remote deployment should use HTTPS. The webcam flow simulates camera framing,
+while a real IP camera will later require an RTSP/HTTP snapshot adapter.
 
 ## Windows Setup
 

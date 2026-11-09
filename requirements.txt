@@ -3,6 +3,7 @@ easyocr
 paddlepaddle==3.2.0
 paddleocr
 ipywidgets
+ipympl
 ipykernel
 kagglehub
 opencv-contrib-python

@@ -8,7 +8,7 @@ import shutil
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-DETECTOR_SOURCE = PROJECT_ROOT / "ml/experiments/yolo_plate_segmentation/yolo11n_plate_seg_v1/weights/best.pt"
+DETECTOR_SOURCE = PROJECT_ROOT / "ml/experiments/yolo_plate_segmentation/yolo11n_plate_seg_v2_camera/weights/best.pt"
 RECOGNIZER_SOURCE = PROJECT_ROOT / "ml/experiments/paddleocr_plate_recognizer/inference_perspective_v3"
 TARGET_ROOT = PROJECT_ROOT / "ml/weights/anpr"
 
@@ -37,7 +37,7 @@ def main() -> None:
 
     packaged_files = [detector_target, *sorted(recognizer_target.iterdir())]
     manifest = {
-        "model_version": "parking-segmenter-v1-perspective-recognizer-v3",
+        "model_version": "parking-segmenter-v2-camera-perspective-recognizer-v3",
         "detector": detector_target.relative_to(PROJECT_ROOT).as_posix(),
         "recognizer": recognizer_target.relative_to(PROJECT_ROOT).as_posix(),
         "files": {

@@ -6,6 +6,15 @@ const message = document.querySelector("#message");
 const results = document.querySelector("#results");
 const detectionsContainer = document.querySelector("#detections");
 const template = document.querySelector("#detection-template");
+const cameraButton = document.querySelector("#camera-button");
+const cameraPanel = document.querySelector("#camera-panel");
+const cameraPreview = document.querySelector("#camera-preview");
+const cameraCanvas = document.querySelector("#camera-canvas");
+const cameraState = document.querySelector("#camera-state");
+const startCameraButton = document.querySelector("#start-camera-button");
+const captureButton = document.querySelector("#capture-button");
+const closeCameraButton = document.querySelector("#close-camera-button");
+let cameraStream = null;
 
 const formatPercent = (value) => `${(Number(value) * 100).toFixed(1)}%`;
 
@@ -65,14 +74,13 @@ function renderResults(data) {
   });
 }
 
-form.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  if (!imageInput.files.length) return;
+async function analyzeImage(file) {
   analyzeButton.disabled = true;
+  captureButton.disabled = true;
   analyzeButton.textContent = "Analyzing...";
   showMessage("Loading models and analyzing image...");
   const payload = new FormData();
-  payload.append("image", imageInput.files[0]);
+  payload.append("image", file, file.name || "camera-capture.jpg");
 
   try {
     const response = await fetch("/api/anpr", { method: "POST", body: payload });
@@ -84,8 +92,70 @@ form.addEventListener("submit", async (event) => {
     showMessage(error.message, true);
   } finally {
     analyzeButton.disabled = false;
+    captureButton.disabled = !cameraStream;
     analyzeButton.textContent = "Analyze plate";
   }
+}
+
+function stopCamera() {
+  cameraStream?.getTracks().forEach((track) => track.stop());
+  cameraStream = null;
+  cameraPreview.srcObject = null;
+  cameraState.textContent = "Camera is off";
+  startCameraButton.disabled = false;
+  captureButton.disabled = true;
+}
+
+cameraButton.addEventListener("click", () => {
+  cameraPanel.hidden = false;
+  cameraPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+});
+
+startCameraButton.addEventListener("click", async () => {
+  if (!navigator.mediaDevices?.getUserMedia) {
+    showMessage("Camera access is not supported by this browser.", true);
+    return;
+  }
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+      audio: false,
+    });
+    cameraPreview.srcObject = cameraStream;
+    await cameraPreview.play();
+    cameraState.textContent = `${cameraPreview.videoWidth} × ${cameraPreview.videoHeight}`;
+    startCameraButton.disabled = true;
+    captureButton.disabled = false;
+  } catch (error) {
+    showMessage(`Camera could not be started: ${error.message}`, true);
+  }
+});
+
+captureButton.addEventListener("click", () => {
+  const width = cameraPreview.videoWidth;
+  const height = cameraPreview.videoHeight;
+  if (!width || !height) return;
+  cameraCanvas.width = width;
+  cameraCanvas.height = height;
+  cameraCanvas.getContext("2d").drawImage(cameraPreview, 0, 0, width, height);
+  cameraCanvas.toBlob(
+    (blob) => blob && analyzeImage(new File([blob], "camera-capture.jpg", { type: "image/jpeg" })),
+    "image/jpeg",
+    0.92,
+  );
+});
+
+closeCameraButton.addEventListener("click", () => {
+  stopCamera();
+  cameraPanel.hidden = true;
+});
+
+window.addEventListener("beforeunload", stopCamera);
+
+form.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!imageInput.files.length) return;
+  analyzeImage(imageInput.files[0]);
 });
 
 checkHealth();
