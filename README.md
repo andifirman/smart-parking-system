@@ -166,6 +166,41 @@ API and are not written to disk. Browser camera access works on localhost; a
 remote deployment should use HTTPS. The webcam flow simulates camera framing,
 while a real IP camera will later require an RTSP/HTTP snapshot adapter.
 
+### Arduino Nano vehicle trigger
+
+The Arduino Nano firmware is stored at
+`firmware/arduino/vehicle_sensor/vehicle_sensor.ino`. A classic Nano uses an
+Arduino sketch (`.ino`), while Python runs on the FastAPI host as the USB-serial
+bridge.
+
+HC-SR04 wiring:
+
+```text
+HC-SR04 VCC  -> Nano 5V
+HC-SR04 GND  -> Nano GND
+HC-SR04 TRIG -> Nano D9
+HC-SR04 ECHO -> Nano D10
+Nano USB     -> Backend computer
+```
+
+Upload the sketch with Arduino IDE using **Arduino Nano**, the matching
+processor/bootloader, and the Nano's COM port. Then configure `.env`:
+
+```dotenv
+APP_ENV=development
+ARDUINO_PORT=COM3
+ARDUINO_BAUDRATE=115200
+```
+
+Use Windows Device Manager or Arduino IDE to find the actual COM port. Restart
+FastAPI after changing `.env`. In the web application, open **Use camera**,
+click **Start camera** once to grant browser permission, and click **Arm
+sensor**. A stable object within 35 cm emits one `vehicle_detected` event and
+automatically captures a frame. The sensor rearms only after the object moves
+beyond 50 cm, preventing repeated captures of the same vehicle. **Simulate
+vehicle** tests the complete browser flow without connected hardware and is
+available only in development mode.
+
 ## Windows Setup
 
 Open PowerShell and run:

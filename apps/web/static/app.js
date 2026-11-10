@@ -14,7 +14,13 @@ const cameraState = document.querySelector("#camera-state");
 const startCameraButton = document.querySelector("#start-camera-button");
 const captureButton = document.querySelector("#capture-button");
 const closeCameraButton = document.querySelector("#close-camera-button");
+const sensorState = document.querySelector("#sensor-state");
+const armSensorButton = document.querySelector("#arm-sensor-button");
+const simulateSensorButton = document.querySelector("#simulate-sensor-button");
 let cameraStream = null;
+let sensorArmed = false;
+let lastSensorEventId = null;
+let analysisInProgress = false;
 
 const formatPercent = (value) => `${(Number(value) * 100).toFixed(1)}%`;
 
@@ -75,6 +81,8 @@ function renderResults(data) {
 }
 
 async function analyzeImage(file) {
+  if (analysisInProgress) return;
+  analysisInProgress = true;
   analyzeButton.disabled = true;
   captureButton.disabled = true;
   analyzeButton.textContent = "Analyzing...";
@@ -91,6 +99,7 @@ async function analyzeImage(file) {
     results.hidden = true;
     showMessage(error.message, true);
   } finally {
+    analysisInProgress = false;
     analyzeButton.disabled = false;
     captureButton.disabled = !cameraStream;
     analyzeButton.textContent = "Analyze plate";
@@ -104,17 +113,16 @@ function stopCamera() {
   cameraState.textContent = "Camera is off";
   startCameraButton.disabled = false;
   captureButton.disabled = true;
+  sensorArmed = false;
+  armSensorButton.disabled = true;
+  armSensorButton.textContent = "Arm sensor";
 }
 
-cameraButton.addEventListener("click", () => {
-  cameraPanel.hidden = false;
-  cameraPanel.scrollIntoView({ behavior: "smooth", block: "start" });
-});
-
-startCameraButton.addEventListener("click", async () => {
+async function startCamera() {
+  if (cameraStream) return true;
   if (!navigator.mediaDevices?.getUserMedia) {
     showMessage("Camera access is not supported by this browser.", true);
-    return;
+    return false;
   }
   try {
     cameraStream = await navigator.mediaDevices.getUserMedia({
@@ -126,12 +134,33 @@ startCameraButton.addEventListener("click", async () => {
     cameraState.textContent = `${cameraPreview.videoWidth} × ${cameraPreview.videoHeight}`;
     startCameraButton.disabled = true;
     captureButton.disabled = false;
+    armSensorButton.disabled = false;
+    return true;
   } catch (error) {
     showMessage(`Camera could not be started: ${error.message}`, true);
+    return false;
   }
+}
+
+async function armSensor() {
+  if (!cameraStream) return;
+  await pollSensor();
+  sensorArmed = true;
+  armSensorButton.textContent = "Disarm sensor";
+  cameraState.textContent = "Camera ready · waiting for vehicle";
+}
+
+cameraButton.addEventListener("click", async () => {
+  cameraPanel.hidden = false;
+  cameraPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+  if (await startCamera()) await armSensor();
 });
 
-captureButton.addEventListener("click", () => {
+startCameraButton.addEventListener("click", async () => {
+  await startCamera();
+});
+
+function captureCameraFrame() {
   const width = cameraPreview.videoWidth;
   const height = cameraPreview.videoHeight;
   if (!width || !height) return;
@@ -143,6 +172,57 @@ captureButton.addEventListener("click", () => {
     "image/jpeg",
     0.92,
   );
+}
+
+captureButton.addEventListener("click", () => {
+  captureCameraFrame();
+});
+
+async function pollSensor() {
+  try {
+    const response = await fetch("/api/sensor/status");
+    const data = await response.json();
+    const distance = data.distance_cm == null ? "" : ` · ${Number(data.distance_cm).toFixed(1)} cm`;
+    sensorState.textContent = data.connected
+      ? `Sensor connected on ${data.port}${distance}`
+      : data.enabled
+        ? `Sensor waiting on ${data.port}`
+        : "Sensor disabled · configure ARDUINO_PORT";
+    if (lastSensorEventId === null) lastSensorEventId = data.event_id;
+    if (data.event_id > lastSensorEventId) {
+      lastSensorEventId = data.event_id;
+      if (sensorArmed && cameraStream && !analysisInProgress) {
+        cameraState.textContent = `Vehicle detected${distance} · capturing`;
+        captureCameraFrame();
+      }
+    }
+  } catch {
+    sensorState.textContent = "Sensor service unavailable";
+  }
+}
+
+armSensorButton.addEventListener("click", async () => {
+  if (!cameraStream) {
+    showMessage("Start the camera before arming the sensor.", true);
+    return;
+  }
+  if (!sensorArmed) {
+    await armSensor();
+    return;
+  }
+  sensorArmed = false;
+  armSensorButton.textContent = sensorArmed ? "Disarm sensor" : "Arm sensor";
+  cameraState.textContent = sensorArmed ? "Camera ready · waiting for vehicle" : "Camera ready · sensor disarmed";
+});
+
+simulateSensorButton.addEventListener("click", async () => {
+  try {
+    const response = await fetch("/api/sensor/simulate", { method: "POST" });
+    if (!response.ok) throw new Error("Simulation is disabled.");
+    await pollSensor();
+  } catch (error) {
+    showMessage(error.message, true);
+  }
 });
 
 closeCameraButton.addEventListener("click", () => {
@@ -159,3 +239,5 @@ form.addEventListener("submit", async (event) => {
 });
 
 checkHealth();
+pollSensor();
+window.setInterval(pollSensor, 500);
